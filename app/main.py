@@ -1,4 +1,7 @@
-import os,shutil
+from os import getcwd, remove
+import os
+from fastapi.responses import FileResponse,JSONResponse
+
 from typing import Optional
 from typing import List
 from datetime import datetime
@@ -34,7 +37,7 @@ async def create_item(user: UserCreate,db: Session = Depends(get_db)):
     
 
 
-@app.post("/uploadfiles/",response_model=schemas.TokenData)
+@app.post("/uploadfiles/")#,response_model=schemas.TokenData)
 async def create_upload_files(files: List[UploadFile]= File (...),db: Session = Depends(get_db), email: str = Depends(token.get_current_user)):
     #print(user.username)
     user = db.query(models.User).filter(models.User.email ==email).first()
@@ -54,8 +57,55 @@ async def create_upload_files(files: List[UploadFile]= File (...),db: Session = 
     
     db.commit()
     return user
+
+@app.get("/file",status_code=200)
+def get_all(db: Session = Depends(get_db), email: str = Depends(token.get_current_user)):
+    #path='D:/sem 8/Hackathon/app/static/'
+    files_of_user=[]
+    user = db.query(models.User).filter(models.User.email ==email).first()
     
-    #return {"filenames": [file.filename for file in files]}
+    files = db.query(models.File).filter(models.File.user_id ==user.id)
+
+    for file in files:
+        files_of_user.append(file.owner)
+
+
+    if not file:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="File not found")
+    
+    return files_of_user
+    #FileResponse(path + name_file, media_type='application/octet-stream', filename=name_file)
+
+
+@app.get("/download/{name_file}",status_code=200)
+def download_file(name_file: str,db: Session = Depends(get_db), email: str = Depends(token.get_current_user)):
+    path='D:/sem 8/Hackathon/app/static/'
+    user = db.query(models.User).filter(models.User.email ==email).first()
+    
+    file = db.query(models.File).filter(models.File.user_id ==user.id).first()
+    if not file:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="File not found")
+    return FileResponse(path + name_file, media_type='application/octet-stream', filename=name_file)
+
+@app.delete("/delete/{name_file}")
+def delete_file(name_file: str,db: Session = Depends(get_db), email: str = Depends(token.get_current_user)):
+    path='D:/sem 8/Hackathon/app/static/'
+    user = db.query(models.User).filter(models.User.email ==email).first()
+    try:
+        file= db.query(models.File).filter(models.File.user_id ==user.id)
+        file.delete(synchronize_session=False)
+        db.commit()
+        remove( path + name_file)
+
+        return JSONResponse(content={
+            "removed": True
+            }, status_code=200)   
+    except FileNotFoundError:
+        return JSONResponse(content={
+            "removed": False,
+            "error_message": "File not found"
+        }, status_code=404)
+
 @app.post('/login',response_model=schemas.Token)
 def login(request:OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
     #print( request.username,"Fuck" )
