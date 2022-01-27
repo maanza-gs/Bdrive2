@@ -16,9 +16,9 @@ class UserBase(BaseModel):
 
 class User(UserBase):
     username: str
-    email: EmailStr
+    email: str
     #items: List[Item] = []
-
+    
     class Config:
         orm_mode = True
 
@@ -26,3 +26,13 @@ class UserCreate(User):
     password: str
 
 
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    class Config:
+        orm_mode = True
+
+
+class TokenData(BaseModel):
+    email: Optional[str] = None
