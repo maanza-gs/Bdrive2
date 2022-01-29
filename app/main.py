@@ -1,12 +1,13 @@
 from os import getcwd, remove
 import os
 from fastapi.responses import FileResponse,JSONResponse
-
+from pathlib import Path
 from typing import Optional
 from typing import List
 from datetime import datetime
-from fastapi import FastAPI, File, UploadFile,Depends,HTTPException,status,Request
+from fastapi import FastAPI, File, UploadFile,Depends,HTTPException,status,Request,Response
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security.utils import get_authorization_scheme_param
 from .schemas import Item,User, UserCreate
 from . import schemas, database, models, token,hashing, forms
 
@@ -18,7 +19,9 @@ from fastapi.templating import Jinja2Templates
 
 
 app = FastAPI()
-templates = Jinja2Templates(directory="templates/")
+
+BASE_PATH = Path(__file__).resolve().parent
+templates = Jinja2Templates(directory=str(BASE_PATH / "templates"))
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -36,14 +39,12 @@ async def create_user(request:Request,db: Session = Depends(get_db)):
 
     form = forms.RegistrationForm(request)
     await form.load_data()
-    
-
-    
+        
     if await form.is_valid():
         user = UserCreate(username=form.username, email=form.email, password=form.password)
 
-    db_email = crud.get_user_by_email(db, email=user.email).first()
-    db_username=crud.get_user_by_username(db, username=user.username).first()
+    db_email = crud.get_user_by_email(db, email=user.email)
+    db_username=crud.get_user_by_username(db, username=user.username)
 
     if db_email :
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -79,20 +80,20 @@ async def create_upload_files(files: List[UploadFile]= File (...),db: Session = 
     return user
 
 @app.get("/file",status_code=200)
-def get_all(db: Session = Depends(get_db), email: str = Depends(token.get_current_user)):
+def get_all(request:Request,db: Session = Depends(get_db)):
     #path='D:/sem 8/Hackathon/app/static/'
     files_of_user=[]
-    user = db.query(models.User).filter(models.User.email ==email).first()
-    
+    token = request.cookies.get("access_token")
+    scheme, param = get_authorization_scheme_param(token)  # scheme will hold "Bearer" and param will hold actual token value
+    current_user: User = token.get_current_user_from_token(token=param, db=db)
+
+    user = db.query(models.User).filter(models.User.email ==current_user.email).first()
     files = db.query(models.File).filter(models.File.user_id ==user.id)
 
     for file in files:
         files_of_user.append(file.owner)
 
-    # if not file:
-    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="File not found")
-    
-    return files_of_user
+    return templates.TemplateResponse("files.html", files=files_of_user)
     #FileResponse(path + name_file, media_type='application/octet-stream', filename=name_file)
 
 
@@ -125,18 +126,36 @@ def delete_file(name_file: str,db: Session = Depends(get_db), email: str = Depen
             "error_message": "File not found"
         }, status_code=404)
 
-@app.post('/login',response_model=schemas.Token)
-def login(request:OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
-    #print( request.username,"Fuck" )
-    user = db.query(models.User).filter(models.User.email == request.username).first()
-    #print(user)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"Invalid Credentials")
-    if not hashing.Hash.verify(user.password, request.password):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"Incorrect password")
 
-    access_token = token.create_access_token(data={"sub": user.email})
+@app.get("/login",response_model=User)
+def login(request:Request):
+    print("loooooo")
+    return templates.TemplateResponse('login.html', context={'request': request})
 
-    return {"access_token": access_token, "token_type": "bearer"}
+@app.post('/login',response_model=User)
+async def login(request:Request, db: Session = Depends(database.get_db)):
+
+    form = forms.LoginForm(request)
+    
+    await form.load_data()
+    # print(form.password)
+    # print(form.username)
+    # print("sadsda")
+    if await form.is_valid():
+  
+    #user = db.query(models.User).filter(models.User.email == request.email).first()
+    #print(user.email)
+
+        try:
+            response = templates.TemplateResponse("login.html", form.__dict__)
+            #print(response.body)
+            token.login_for_access_token(response=response, form_data=form, db=db)
+            return response
+        except HTTPException:
+            form.__dict__.update(msg="")
+            form.__dict__.get("errors").append("Incorrect Email or Password")
+    #print("shdfljsdhf;i")
+    return templates.TemplateResponse("login.html", form.__dict__)
+    
+    
+    

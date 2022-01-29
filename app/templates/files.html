@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+    <form method="POST">
+        <div class="mb-3">
+        {% for file in files %}
+            <tr>
+                <td>{{file.filename}}</td>
+                <td>{{file.datetime}}</td>
+            </tr>
+        {% endfor %}
+   
+    </form>
+</body>
+<html>

@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 import secrets,os
-from . import models, schemas
+from . import models, schemas   
 from . hashing import Hash
 from fastapi import Depends, UploadFile
 from fastapi.security import OAuth2PasswordBearer
@@ -10,11 +10,11 @@ import shutil
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-def get_user(db: Session, user_id: int):
-    return db.query(models.User).filter(models.User.id == user_id).first()
+# def get_user(db: Session, user_id: int):
+#   return db.query(models.User).filter(models.User.id == user_id).first()
 
-def get_user_by_username(db: Session, username: str):
-    return db.query(models.User).filter(models.User.username == username).first()
+def get_user(db: Session, username: str):
+    return db.query(models.User).filter(models.User.email == username).first()
 
 
 def get_user_by_email(db: Session, email: str):
