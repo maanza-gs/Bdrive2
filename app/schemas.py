@@ -16,7 +16,7 @@ class UserBase(BaseModel):
 
 class User(UserBase):
     username: str
-    email: str
+    email: EmailStr
     #items: List[Item] = []
     
     class Config:
@@ -35,4 +35,4 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    email: Optional[str] = None
+    email: Optional[EmailStr] = None

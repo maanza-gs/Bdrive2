@@ -5,16 +5,20 @@ from fastapi.responses import FileResponse,JSONResponse
 from typing import Optional
 from typing import List
 from datetime import datetime
-from fastapi import FastAPI, File, UploadFile,Depends,HTTPException,status
+from fastapi import FastAPI, File, UploadFile,Depends,HTTPException,status,Request
 from fastapi.security import OAuth2PasswordRequestForm
 from .schemas import Item,User, UserCreate
-from . import schemas, database, models, token,hashing
+from . import schemas, database, models, token,hashing, forms
 
 from .database import SessionLocal, engine,get_db
 from sqlalchemy.orm import Session
 from .import crud,models,schemas,token
 
+from fastapi.templating import Jinja2Templates
+
+
 app = FastAPI()
+templates = Jinja2Templates(directory="templates/")
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -22,17 +26,33 @@ models.Base.metadata.create_all(bind=engine)
 #oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
+@app.get("/register",response_model=User)
+async def create_user(request:Request):
+    return templates.TemplateResponse('register.html', context={'request': request})
+
 
 @app.post("/register",response_model=User)
-async def create_item(user: UserCreate,db: Session = Depends(get_db)):
-    db_email = crud.get_user_by_email(db, email=user.email)
-    db_username=crud.get_user_by_username(db, username=user.username)
+async def create_user(request:Request,db: Session = Depends(get_db)):
+
+    form = forms.RegistrationForm(request)
+    await form.load_data()
+    
+
+    
+    if await form.is_valid():
+        user = UserCreate(username=form.username, email=form.email, password=form.password)
+
+    db_email = crud.get_user_by_email(db, email=user.email).first()
+    db_username=crud.get_user_by_username(db, username=user.username).first()
 
     if db_email :
         raise HTTPException(status_code=400, detail="Email already registered")
     if db_username :
         raise HTTPException(status_code=400, detail="username already registered")
-    return crud.create_user(db=db, user=user)
+
+    crud.create_user(db=db, user=user)
+    return templates.TemplateResponse("register.html", form.__dict__)
+
 
     
 
@@ -69,9 +89,8 @@ def get_all(db: Session = Depends(get_db), email: str = Depends(token.get_curren
     for file in files:
         files_of_user.append(file.owner)
 
-
-    if not file:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="File not found")
+    # if not file:
+    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="File not found")
     
     return files_of_user
     #FileResponse(path + name_file, media_type='application/octet-stream', filename=name_file)
@@ -119,4 +138,5 @@ def login(request:OAuth2PasswordRequestForm = Depends(), db: Session = Depends(d
                             detail=f"Incorrect password")
 
     access_token = token.create_access_token(data={"sub": user.email})
+
     return {"access_token": access_token, "token_type": "bearer"}
