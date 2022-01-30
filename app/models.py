@@ -9,7 +9,7 @@ class File(Base):
     filename=Column(String ,nullable=False)
     date_uploaded=Column(String,default=str(datetime.datetime.utcnow()))
     user_id=Column(Integer,ForeignKey("users.id"))
-
+    #shared_to=Column(Integer)
     owner=relationship("User",back_populates="files")
 
 class User(Base): 
@@ -18,5 +18,6 @@ class User(Base):
     username = Column(String(20), unique=True, nullable=False)
     email =Column(String(120), unique=True, nullable=False)
     password = Column(String(60), nullable=False)
+
     
     files=relationship('File',back_populates="owner")

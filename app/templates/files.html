@@ -1,16 +1,50 @@
 <!DOCTYPE html>
 <html>
-
+    <h1>All Files of current user</h1>
+    <!-- <p>Please fill in the details to create an account with us.</p> -->
+    
 <body>
     <form method="POST">
         <div class="mb-3">
-        {% for file in files %}
-            <tr>
-                <td>{{file.filename}}</td>
-                <td>{{file.datetime}}</td>
-            </tr>
-        {% endfor %}
-   
+        {% if not data %}
+            <h1>No files!!</h1>
+        {%endif%}
     </form>
+        {% for file in data %}
+     
+            <h1>File name   : {{file.filename}}</h1>
+            <p>uploaded at : {{file.date_uploaded}}</p>
+            
+            <form method="POST"  action="/files">
+                <label for="delete">Delete</label>
+                <input type="submit" name="delete" value={{file.filename}} />
+            </form>
+
+            <form method="POST"  action="/files">
+                <label for="rename">Rename:</label><br>
+                <input type="text" id="rename" name="rename" required><br>
+                <input type="submit" name="Rename" value={{file.filename}} />
+            </form>
+            
+            <form method="POST"  action="/files">
+                <label for="share">Share to :</label><br>
+                <input type="text"  name="share" required><br>
+                <input type="submit" name="Share" value={{file.filename}} />
+            </form>
+
+            <form method="POST"  action="/files">
+                <label for="download">Download</label>
+                <input type="submit" name="download" value={{file.filename}} />
+            </form>  
+
+        {% endfor %}
+    
+    <form method="POST"  action="/files" enctype="multipart/form-data">
+        <label for="myfiles">Upload file</label>
+        <input type="file" id="myfile" name="myfiles" multiple="multiple"  />  
+        <br /><br />
+        <input type="submit" name="upload" value="upload" />
+    </form>
+   
 </body>
 <html>

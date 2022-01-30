@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from .import crud,models,schemas,token
 
 from fastapi.templating import Jinja2Templates
+from starlette.responses import RedirectResponse
 
 
 app = FastAPI()
@@ -44,7 +45,7 @@ async def create_user(request:Request,db: Session = Depends(get_db)):
         user = UserCreate(username=form.username, email=form.email, password=form.password)
 
     db_email = crud.get_user_by_email(db, email=user.email)
-    db_username=crud.get_user_by_username(db, username=user.username)
+    db_username=crud.get_user(db, username=user.username)
 
     if db_email :
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -56,51 +57,113 @@ async def create_user(request:Request,db: Session = Depends(get_db)):
 
 
     
+# @app.get("/uploadfiles",status_code=200)
+# def upload(request: Request, db: Session = Depends(get_db)):
+#     token = request.cookies.get("access_token")
+#     if not token:
+#         print("Login is must!") 
+#         response = RedirectResponse('/login', status_code=303)
+#         return response
+#         #templates.TemplateResponse("login.html",{"request": request})
+#     return templates.TemplateResponse("uploadfiles.html", {"request": request})
 
 
-@app.post("/uploadfiles/")#,response_model=schemas.TokenData)
-async def create_upload_files(files: List[UploadFile]= File (...),db: Session = Depends(get_db), email: str = Depends(token.get_current_user)):
+
+#,response_model=schemas.TokenData)
+def create_upload_files(request: Request,myfiles: List[UploadFile]= File (...),db: Session = Depends(get_db)):
     #print(user.username)
-    user = db.query(models.User).filter(models.User.email ==email).first()
+    access_token = request.cookies.get("access_token")
+    #print("token: ", access_token)
+    scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
+    user: User = token.get_current_user_from_token(token=param, db=db)
+    if not user:
+         return templates.TemplateResponse("login.html",{"request": request})
+
+    current_user = db.query(models.User).filter(models.User.email ==user.email).first()
     #print(user.username)
+    existing_files = db.query(models.File).filter(models.File.user_id ==user.id)
     
-    for file in files:
-        print(file.filename)
-        
+    for file in myfiles:
+        #print(file.filename)
+        if file  in existing_files:
+            print("file.filename alread exist!")
+            continue
+
         file_location = os.path.join(f'D:/sem 8/Hackathon/app/static/{file.filename}')
         
         with open(file_location, "wb+") as buffer:
-            content = await file.read()
+            content = file.file.read()
             buffer.write(content)
             buffer.close()
-        db_file = models.File(filename=file.filename,date_uploaded=str(datetime.utcnow()),user_id=user.id)
+        print("copied")
+        db_file = models.File(filename=file.filename,date_uploaded=str(datetime.utcnow()),user_id=current_user.id)
         db.add(db_file)
-    
     db.commit()
-    return user
+    #print("uploaded")
+    #return templates.TemplateResponse("files.html",{"request": request})
+    
 
-@app.get("/file",status_code=200)
-def get_all(request:Request,db: Session = Depends(get_db)):
-    #path='D:/sem 8/Hackathon/app/static/'
-    files_of_user=[]
-    token = request.cookies.get("access_token")
-    scheme, param = get_authorization_scheme_param(token)  # scheme will hold "Bearer" and param will hold actual token value
+@app.get("/files",status_code=200)
+def get_all(request: Request, db: Session = Depends(get_db)):
+    data=[]
+    access_token = request.cookies.get("access_token")
+    #print("token: ", token)
+    scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
     current_user: User = token.get_current_user_from_token(token=param, db=db)
+    if not current_user:
+         return templates.TemplateResponse("login.html",{"request": request})
 
     user = db.query(models.User).filter(models.User.email ==current_user.email).first()
     files = db.query(models.File).filter(models.File.user_id ==user.id)
 
     for file in files:
-        files_of_user.append(file.owner)
+        data.append(file)
+    #print(data)
 
-    return templates.TemplateResponse("files.html", files=files_of_user)
+        #templates.TemplateResponse("login.html",{"request": request})
+    return templates.TemplateResponse("files.html", {"request": request,"data":data})
+
+
+@app.post("/files",status_code=200)
+def get_all(request:Request,db: Session = Depends(get_db),myfiles: List[UploadFile]= File (...)):
+    #path='D:/sem 8/Hackathon/app/static/'
+    data=[]
+    
+    access_token = request.cookies.get("access_token")
+    #print("token: ", token)
+    scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
+    current_user: User = token.get_current_user_from_token(token=param, db=db)
+    if not current_user:
+         return templates.TemplateResponse("login.html",{"request": request})
+    print( "req")
+    print( request)
+    create_upload_files(request,myfiles,db)
+
+    user = db.query(models.User).filter(models.User.email ==current_user.email).first()
+    files = db.query(models.File).filter(models.File.user_id ==user.id)
+
+
+    for file in files:
+        data.append(file)
+    print(data)
+    
+
+    return templates.TemplateResponse("files.html", {"request":Request,"data":data})
     #FileResponse(path + name_file, media_type='application/octet-stream', filename=name_file)
 
 
 @app.get("/download/{name_file}",status_code=200)
-def download_file(name_file: str,db: Session = Depends(get_db), email: str = Depends(token.get_current_user)):
+def download_file(request:Request,name_file: str,db: Session = Depends(get_db)):
+
+    access_token = request.cookies.get("access_token")
+    print("token: ", token)
+    scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
+    current_user: User = token.get_current_user_from_token(token=param, db=db)
+    if not current_user:
+         return templates.TemplateResponse("login.html",{"request": request})
+
     path='D:/sem 8/Hackathon/app/static/'
-    user = db.query(models.User).filter(models.User.email ==email).first()
+    user = db.query(models.User).filter(models.User.email ==current_user.email).first()
     
     file = db.query(models.File).filter(models.File.user_id ==user.id).first()
     if not file:
@@ -108,9 +171,18 @@ def download_file(name_file: str,db: Session = Depends(get_db), email: str = Dep
     return FileResponse(path + name_file, media_type='application/octet-stream', filename=name_file)
 
 @app.delete("/delete/{name_file}")
-def delete_file(name_file: str,db: Session = Depends(get_db), email: str = Depends(token.get_current_user)):
+def delete_file(request:Request,name_file: str,db: Session = Depends(get_db),):
+    
+    access_token = request.cookies.get("access_token")
+    print("token: ", token)
+    scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
+    current_user: User = token.get_current_user_from_token(token=param, db=db)
+    if not current_user:
+         return templates.TemplateResponse("login.html",{"request": request})
+
+
     path='D:/sem 8/Hackathon/app/static/'
-    user = db.query(models.User).filter(models.User.email ==email).first()
+    user = db.query(models.User).filter(models.User.email ==current_user.email).first()
     try:
         file= db.query(models.File).filter(models.File.user_id ==user.id)
         file.delete(synchronize_session=False)
@@ -129,32 +201,22 @@ def delete_file(name_file: str,db: Session = Depends(get_db), email: str = Depen
 
 @app.get("/login",response_model=User)
 def login(request:Request):
-    print("loooooo")
     return templates.TemplateResponse('login.html', context={'request': request})
 
 @app.post('/login',response_model=User)
 async def login(request:Request, db: Session = Depends(database.get_db)):
 
     form = forms.LoginForm(request)
-    
     await form.load_data()
-    # print(form.password)
-    # print(form.username)
-    # print("sadsda")
     if await form.is_valid():
-  
-    #user = db.query(models.User).filter(models.User.email == request.email).first()
-    #print(user.email)
-
         try:
             response = templates.TemplateResponse("login.html", form.__dict__)
-            #print(response.body)
             token.login_for_access_token(response=response, form_data=form, db=db)
             return response
         except HTTPException:
             form.__dict__.update(msg="")
             form.__dict__.get("errors").append("Incorrect Email or Password")
-    #print("shdfljsdhf;i")
+   
     return templates.TemplateResponse("login.html", form.__dict__)
     
     
