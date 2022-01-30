@@ -13,6 +13,14 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 # def get_user(db: Session, user_id: int):
 #   return db.query(models.User).filter(models.User.id == user_id).first()
 
+# def rename(db: Session, oldname:str,newname:str):
+
+#     new_user = models.User(username=user.username,email=user.email,password=Hash.bcrypt(user.password))
+#     db.add(new_user)
+#     db.commit()
+#     db.refresh(new_user)
+#     return new_user
+
 def get_user(db: Session, username: str):
     return db.query(models.User).filter(models.User.email == username).first()
 

@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 from typing import List
 from datetime import datetime
-from fastapi import FastAPI, File, UploadFile,Depends,HTTPException,status,Request,Response
+from fastapi import FastAPI, File, UploadFile,Depends,HTTPException,status,Request,Response,Form
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.security.utils import get_authorization_scheme_param
 from .schemas import Item,User, UserCreate
@@ -85,9 +85,10 @@ def create_upload_files(request: Request,myfiles: List[UploadFile]= File (...),d
     
     for file in myfiles:
         #print(file.filename)
-        if file  in existing_files:
-            print("file.filename alread exist!")
-            continue
+        #if file  in existing_files:
+            #pass
+            #print("file.filename alread exist!")
+            #continue
 
         file_location = os.path.join(f'D:/sem 8/Hackathon/app/static/{file.filename}')
         
@@ -95,7 +96,7 @@ def create_upload_files(request: Request,myfiles: List[UploadFile]= File (...),d
             content = file.file.read()
             buffer.write(content)
             buffer.close()
-        print("copied")
+        #print("copied")
         db_file = models.File(filename=file.filename,date_uploaded=str(datetime.utcnow()),user_id=current_user.id)
         db.add(db_file)
     db.commit()
@@ -130,13 +131,15 @@ def get_all(request:Request,db: Session = Depends(get_db),myfiles: List[UploadFi
     data=[]
     
     access_token = request.cookies.get("access_token")
-    #print("token: ", token)
+
     scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
     current_user: User = token.get_current_user_from_token(token=param, db=db)
     if not current_user:
          return templates.TemplateResponse("login.html",{"request": request})
+    
     print( "req")
-    print( request)
+    print(request.form)
+
     create_upload_files(request,myfiles,db)
 
     user = db.query(models.User).filter(models.User.email ==current_user.email).first()
@@ -152,8 +155,54 @@ def get_all(request:Request,db: Session = Depends(get_db),myfiles: List[UploadFi
     #FileResponse(path + name_file, media_type='application/octet-stream', filename=name_file)
 
 
-@app.get("/download/{name_file}",status_code=200)
-def download_file(request:Request,name_file: str,db: Session = Depends(get_db)):
+@app.post("/rename",status_code=200)#not yet deleted the old file entry
+
+def rename_file(request:Request,oldname:str= Form(...),newname:str= Form(...),db: Session = Depends(get_db)):
+
+    access_token = request.cookies.get("access_token")
+    print("token: ", token)
+    scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
+    current_user: User = token.get_current_user_from_token(token=param, db=db)
+    if not current_user:
+         return templates.TemplateResponse("login.html",{"request": request})
+
+    path='D:/sem 8/Hackathon/app/static/'
+    file = db.query(models.File).filter(models.File.user_id ==current_user.id and models.File.filename ==oldname )
+    already_file=db.query(models.File).filter(models.File.user_id ==current_user.id and models.File.filename ==newname)
+
+    
+
+    extention = newname.split(".")[1]
+    old_extention= oldname.split(".")[1]
+
+    if old_extention != extention:
+        return JSONResponse(content={
+            "removed": False,
+            "error_message": "Not valid Extention"
+        }, status_code=500)
+    if already_file:
+        return JSONResponse(content={
+            "renamed": False,
+            "error_message": "Already file exist in Rename"
+        }, status_code=500)
+
+    if not file:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="File not found")
+
+    os.rename(path+oldname,path+newname)
+    db_file = models.File(filename=newname,date_uploaded=str(datetime.utcnow()),user_id=current_user.id)
+    db.add(db_file)
+    db.commit() 
+
+    return JSONResponse(content={
+            "reNamed": True
+            }, status_code=200) 
+    
+    #return FileResponse(path + filename, media_type='application/octet-stream', filename=filename)
+
+
+@app.post("/download",status_code=200)
+def download_file(request:Request,filename:str= Form(...),db: Session = Depends(get_db)):
 
     access_token = request.cookies.get("access_token")
     print("token: ", token)
@@ -164,22 +213,23 @@ def download_file(request:Request,name_file: str,db: Session = Depends(get_db)):
 
     path='D:/sem 8/Hackathon/app/static/'
     user = db.query(models.User).filter(models.User.email ==current_user.email).first()
-    
     file = db.query(models.File).filter(models.File.user_id ==user.id).first()
+
     if not file:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="File not found")
-    return FileResponse(path + name_file, media_type='application/octet-stream', filename=name_file)
+    return FileResponse(path + filename, media_type='application/octet-stream', filename=filename)
 
-@app.delete("/delete/{name_file}")
-def delete_file(request:Request,name_file: str,db: Session = Depends(get_db),):
+
+
+@app.post("/delete")
+def delete_file(request:Request,db: Session = Depends(get_db),filename:str= Form(...)):
     
     access_token = request.cookies.get("access_token")
-    print("token: ", token)
+    print("token: gotha ", token)
     scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
     current_user: User = token.get_current_user_from_token(token=param, db=db)
     if not current_user:
          return templates.TemplateResponse("login.html",{"request": request})
-
 
     path='D:/sem 8/Hackathon/app/static/'
     user = db.query(models.User).filter(models.User.email ==current_user.email).first()
@@ -187,7 +237,7 @@ def delete_file(request:Request,name_file: str,db: Session = Depends(get_db),):
         file= db.query(models.File).filter(models.File.user_id ==user.id)
         file.delete(synchronize_session=False)
         db.commit()
-        remove( path + name_file)
+        remove( path + filename)
 
         return JSONResponse(content={
             "removed": True

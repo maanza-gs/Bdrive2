@@ -15,36 +15,41 @@
             <h1>File name   : {{file.filename}}</h1>
             <p>uploaded at : {{file.date_uploaded}}</p>
             
-            <form method="POST"  action="/files">
+            <form method="POST"  action="/delete">
                 <label for="delete">Delete</label>
-                <input type="submit" name="delete" value={{file.filename}} />
+                <input type="text" name="filename" value="{{file.filename}}" />
+                <input type="submit" value="delete" />
             </form>
 
-            <form method="POST"  action="/files">
-                <label for="rename">Rename:</label><br>
-                <input type="text" id="rename" name="rename" required><br>
-                <input type="submit" name="Rename" value={{file.filename}} />
+            <form method="POST"  action="/rename">
+                <label for="rename">Rename :</label>
+                <input type="text" name="oldname" value="{{file.filename}}" readonly>
+                <input type="text" name="newname" required/>
+                <input type="submit" name="submit"  />
             </form>
             
-            <form method="POST"  action="/files">
-                <label for="share">Share to :</label><br>
-                <input type="text"  name="share" required><br>
-                <input type="submit" name="Share" value={{file.filename}} />
+            <form method="POST"  action="/share">
+                <label for="share">Share to :</label>
+                <input type="text"  name="share" required/>
+                <input type="submit" name="Share"  />
             </form>
 
-            <form method="POST"  action="/files">
-                <label for="download">Download</label>
-                <input type="submit" name="download" value={{file.filename}} />
+            <form method="POST"  action="/download">
+                <label for="filename">Download</label>
+                <input type="submit" name="filename" value="{{file.filename}}" />
             </form>  
 
         {% endfor %}
-    
+        <br /><br />
     <form method="POST"  action="/files" enctype="multipart/form-data">
         <label for="myfiles">Upload file</label>
         <input type="file" id="myfile" name="myfiles" multiple="multiple"  />  
-        <br /><br />
+        
         <input type="submit" name="upload" value="upload" />
     </form>
    
+
+    
+
 </body>
 <html>
