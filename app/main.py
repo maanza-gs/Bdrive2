@@ -57,17 +57,6 @@ async def create_user(request:Request,db: Session = Depends(get_db)):
     return templates.TemplateResponse("register.html", form.__dict__)
 
 
-    
-# @app.get("/uploadfiles",status_code=200)
-# def upload(request: Request, db: Session = Depends(get_db)):
-#     token = request.cookies.get("access_token")
-#     if not token:
-#         print("Login is must!") 
-#         response = RedirectResponse('/login', status_code=303)
-#         return response
-#         #templates.TemplateResponse("login.html",{"request": request})
-#     return templates.TemplateResponse("uploadfiles.html", {"request": request})
-
 @app.post("/share",status_code=200)
 def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Session = Depends(get_db)):
     
@@ -110,9 +99,6 @@ def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Sessi
             "shared": True,
             "message": "Shared Successfully"
         }, status_code=200)
-
-
-    
 
 
 
