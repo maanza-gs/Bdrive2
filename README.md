@@ -15,26 +15,27 @@ FEATURES
 
 2)Apllication
   The features of the application are listed below.
-      Upload Multiple files.
-      List All files of current user.
-      Delete a particular file.
-      Share the file with other user.
-      Rename a file.
+	
+	Upload Multiple files.
+	List All files of current user.
+	Delete a particular file.
+	Share the file with other user.
+	Rename a file.
   
 	  
 3)Web Based UI
 
-	Simple User friendly interface.
-	It is a Single Page Application.
-	Jinja2 and form are the backend tools.
-	Html used for frontend.
+Simple User friendly interface.
+It is a Single Page Application.
+Jinja2 and form are the backend tools.
+Html used for frontend.
   
 4)Sharing
 
-	User can share their resource to their fellow Bdrive users.
+User can share their resource to their fellow Bdrive users.
 
 5) Deployment
 
-	Heroku is used.
+Heroku is used.
   
 	https://bashdrive.herokuapp.com/
