@@ -57,18 +57,6 @@ async def create_user(request:Request,db: Session = Depends(get_db)):
     crud.create_user(db=db, user=user)
     return templates.TemplateResponse("register.html", form.__dict__)
 
-
-    
-# @app.get("/uploadfiles",status_code=200)
-# def upload(request: Request, db: Session = Depends(get_db)):
-#     token = request.cookies.get("access_token")
-#     if not token:
-#         print("Login is must!") 
-#         response = RedirectResponse('/login', status_code=303)
-#         return response
-#         #templates.TemplateResponse("login.html",{"request": request})
-#     return templates.TemplateResponse("uploadfiles.html", {"request": request})
-
 @app.post("/share",status_code=200)
 def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Session = Depends(get_db)):
     
@@ -85,7 +73,7 @@ def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Sessi
         return JSONResponse(content={
             "shared": False,
             "error_message": "Shared User not found!"
-        }, status_code=500)
+        }, status_code=500) 
 
     path='/app/app/static/'
     print("hiii")
@@ -115,8 +103,7 @@ def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Sessi
     
 
 
-
-#,response_model=schemas.TokenData)
+@app.post("/upload",status_code=200)
 def create_upload_files(request: Request,myfiles: List[UploadFile]= File (...),db: Session = Depends(get_db)):
     #print(user.username)
     access_token = request.cookies.get("access_token")
@@ -131,12 +118,6 @@ def create_upload_files(request: Request,myfiles: List[UploadFile]= File (...),d
     existing_files = db.query(models.File).filter(models.File.user_id ==user.id)
     
     for file in myfiles:
-        #print(file.filename)
-        #if file  in existing_files:
-            #pass
-            #print("file.filename alread exist!")
-            #continue
-
         file_location = os.path.join(f'/app/app/static/{file.filename}')
         
         with open(file_location, "wb+") as buffer:
@@ -167,7 +148,6 @@ def get_all(request: Request, db: Session = Depends(get_db)):
     for file in files:
         data.append(file)
     #print(data)
-
         #templates.TemplateResponse("login.html",{"request": request})
     return templates.TemplateResponse("files.html", {"request": request,"data":data})
 
@@ -176,7 +156,6 @@ def get_all(request: Request, db: Session = Depends(get_db)):
 def get_all(request:Request,db: Session = Depends(get_db),myfiles: List[UploadFile]= File (...)):
     #path='D:/sem 8/Hackathon/app/static/'
     data=[]
-    
     access_token = request.cookies.get("access_token")
 
     scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
