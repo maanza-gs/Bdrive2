@@ -1,2 +1,8 @@
 uvicorn
 pydantic
+fastapi
+Jinja2
+SQLAlchemy
+passlib
+python-jose
+python-multipart
