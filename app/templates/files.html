@@ -30,8 +30,9 @@
             
             <form method="POST"  action="/share">
                 <label for="share">Share to :</label>
+                <input type="text" name="filename" value="{{file.filename}}" readonly>
                 <input type="text"  name="share" required/>
-                <input type="submit" name="Share"  />
+                <input type="submit" name="submit"  />
             </form>
 
             <form method="POST"  action="/download">

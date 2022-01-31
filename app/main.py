@@ -1,5 +1,6 @@
 from os import getcwd, remove
 import os
+from pydantic import EmailStr
 from fastapi.responses import FileResponse,JSONResponse
 from pathlib import Path
 from typing import Optional
@@ -66,6 +67,52 @@ async def create_user(request:Request,db: Session = Depends(get_db)):
 #         return response
 #         #templates.TemplateResponse("login.html",{"request": request})
 #     return templates.TemplateResponse("uploadfiles.html", {"request": request})
+
+@app.post("/share",status_code=200)
+def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Session = Depends(get_db)):
+    
+    #print("hi ldmflskdmf")
+    access_token = request.cookies.get("access_token")
+    scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
+    current_user: User = token.get_current_user_from_token(token=param, db=db)
+    if not current_user:
+         return templates.TemplateResponse("login.html",{"request": request})
+
+    shared: User =crud.get_user_by_email(db,share)
+
+    if not shared:
+        return JSONResponse(content={
+            "shared": False,
+            "error_message": "Shared User not found!"
+        }, status_code=500)
+
+    path='D:/sem 8/Hackathon/app/static/'
+    print("hiii")
+
+    # file = db.query(models.File).filter(models.File.user_id ==current_user.id and models.File.filename ==oldname )
+    already_file=db.query(models.File).filter(models.File.user_id ==shared.id and models.File.filename ==filename).first()
+    
+    if already_file:
+        return JSONResponse(content={
+            "renamed": False,
+            "error_message": "Already file exist in shared user"
+        }, status_code=500)
+    
+    db_update = db.query(models.File).filter(models.File.user_id ==current_user.id and models.File.filename ==filename).first()
+    db_update.shared_to=shared.email
+    db.commit()
+
+    db_file = models.File(filename=filename,date_uploaded=str(datetime.utcnow()),user_id=shared.id)
+    db.add(db_file)
+    db.commit()
+    #db.refresh()
+    return JSONResponse(content={
+            "shared": True,
+            "message": "Shared Successfully"
+        }, status_code=200)
+
+
+    
 
 
 
@@ -137,8 +184,8 @@ def get_all(request:Request,db: Session = Depends(get_db),myfiles: List[UploadFi
     if not current_user:
          return templates.TemplateResponse("login.html",{"request": request})
     
-    print( "req")
-    print(request.form)
+    #print( "req")
+    #print(request.form)
 
     create_upload_files(request,myfiles,db)
 
@@ -146,9 +193,10 @@ def get_all(request:Request,db: Session = Depends(get_db),myfiles: List[UploadFi
     files = db.query(models.File).filter(models.File.user_id ==user.id)
 
 
+
     for file in files:
         data.append(file)
-    print(data)
+    #print(data)
     
 
     return templates.TemplateResponse("files.html", {"request":Request,"data":data})
@@ -157,19 +205,24 @@ def get_all(request:Request,db: Session = Depends(get_db),myfiles: List[UploadFi
 
 @app.post("/rename",status_code=200)#not yet deleted the old file entry
 
-def rename_file(request:Request,oldname:str= Form(...),newname:str= Form(...),db: Session = Depends(get_db)):
+def rename_file(request:Request,db: Session = Depends(get_db),oldname:str= Form(...),newname:str= Form(...)):
 
+    print(newname)
     access_token = request.cookies.get("access_token")
-    print("token: ", token)
+    #print("token: ", token)
     scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
     current_user: User = token.get_current_user_from_token(token=param, db=db)
     if not current_user:
          return templates.TemplateResponse("login.html",{"request": request})
 
+    print("current_user_id ",current_user.id)
     path='D:/sem 8/Hackathon/app/static/'
-    file = db.query(models.File).filter(models.File.user_id ==current_user.id and models.File.filename ==oldname )
-    already_file=db.query(models.File).filter(models.File.user_id ==current_user.id and models.File.filename ==newname)
 
+    file = db.query(models.File).filter(models.File.user_id == current_user.id ).filter(models.File.filename ==oldname ).first()
+    already_file=db.query(models.File).filter(models.File.user_id == current_user.id).filter(models.File.filename ==newname).first()
+
+    print(file)
+    print(already_file)
     
 
     extention = newname.split(".")[1]
@@ -190,9 +243,12 @@ def rename_file(request:Request,oldname:str= Form(...),newname:str= Form(...),db
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="File not found")
 
     os.rename(path+oldname,path+newname)
-    db_file = models.File(filename=newname,date_uploaded=str(datetime.utcnow()),user_id=current_user.id)
-    db.add(db_file)
-    db.commit() 
+
+    #db_file = models.File(filename=oldname,date_uploaded=str(datetime.utcnow()),user_id=current_user.id)
+    file.filename=newname
+    db.add(file)
+    db.commit()
+
 
     return JSONResponse(content={
             "reNamed": True
@@ -205,7 +261,7 @@ def rename_file(request:Request,oldname:str= Form(...),newname:str= Form(...),db
 def download_file(request:Request,filename:str= Form(...),db: Session = Depends(get_db)):
 
     access_token = request.cookies.get("access_token")
-    print("token: ", token)
+    #print("token: ", token)
     scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
     current_user: User = token.get_current_user_from_token(token=param, db=db)
     if not current_user:
@@ -225,7 +281,7 @@ def download_file(request:Request,filename:str= Form(...),db: Session = Depends(
 def delete_file(request:Request,db: Session = Depends(get_db),filename:str= Form(...)):
     
     access_token = request.cookies.get("access_token")
-    print("token: gotha ", token)
+    #print("token: gotha ", token)
     scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
     current_user: User = token.get_current_user_from_token(token=param, db=db)
     if not current_user:

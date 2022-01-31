@@ -1,4 +1,5 @@
-import datetime 
+import datetime
+from pydantic import EmailStr 
 from sqlalchemy import Column, ForeignKey, Integer,String
 from .database import Base
 from sqlalchemy.orm import relationship
@@ -9,7 +10,8 @@ class File(Base):
     filename=Column(String ,nullable=False)
     date_uploaded=Column(String,default=str(datetime.datetime.utcnow()))
     user_id=Column(Integer,ForeignKey("users.id"))
-    #shared_to=Column(Integer)
+    shared_to=Column(String)
+
     owner=relationship("User",back_populates="files")
 
 class User(Base): 
