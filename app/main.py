@@ -27,7 +27,8 @@ templates = Jinja2Templates(directory=str(BASE_PATH / "templates"))
 
 models.Base.metadata.create_all(bind=engine)
 
-
+print(BASE_PATH)
+print(os.getcwd())
 #oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
@@ -88,7 +89,6 @@ def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Sessi
 
     path='/app/static/'
     print("hiii")
-
     # file = db.query(models.File).filter(models.File.user_id ==current_user.id and models.File.filename ==oldname )
     already_file=db.query(models.File).filter(models.File.user_id ==shared.id and models.File.filename ==filename).first()
     
