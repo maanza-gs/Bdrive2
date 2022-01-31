@@ -13,7 +13,7 @@ FEATURES
   So, any client-side malicious javascript would not be able to access the cookie data and our application with be more secure. 
 
 
-2)Apllication
+2) Apllication
   The features of the application are listed below.
 	
 	Upload Multiple files.
@@ -23,14 +23,14 @@ FEATURES
 	Rename a file.
   
 	  
-3)Web Based UI
+3) Web Based UI
 
 Simple User friendly interface.
 It is a Single Page Application.
 Jinja2 and form are the backend tools.
 Html used for frontend.
   
-4)Sharing
+4) Sharing
 
 User can share their resource to their fellow Bdrive users.
 
