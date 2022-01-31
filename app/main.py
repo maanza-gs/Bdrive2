@@ -23,10 +23,7 @@ from starlette.responses import RedirectResponse
 app = FastAPI()
 
 BASE_PATH = Path(__file__).resolve().parent
-
 templates = Jinja2Templates(directory=str(BASE_PATH / "templates"))
-
-print(str(BASE_PATH / "templates"))
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -60,6 +57,17 @@ async def create_user(request:Request,db: Session = Depends(get_db)):
     return templates.TemplateResponse("register.html", form.__dict__)
 
 
+    
+# @app.get("/uploadfiles",status_code=200)
+# def upload(request: Request, db: Session = Depends(get_db)):
+#     token = request.cookies.get("access_token")
+#     if not token:
+#         print("Login is must!") 
+#         response = RedirectResponse('/login', status_code=303)
+#         return response
+#         #templates.TemplateResponse("login.html",{"request": request})
+#     return templates.TemplateResponse("uploadfiles.html", {"request": request})
+
 @app.post("/share",status_code=200)
 def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Session = Depends(get_db)):
     
@@ -78,8 +86,7 @@ def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Sessi
             "error_message": "Shared User not found!"
         }, status_code=500)
 
-
-    path=str(BASE_PATH / "static")
+    path='D:/sem 8/Hackathon/app/static/'
     print("hiii")
 
     # file = db.query(models.File).filter(models.File.user_id ==current_user.id and models.File.filename ==oldname )
@@ -105,6 +112,9 @@ def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Sessi
         }, status_code=200)
 
 
+    
+
+
 
 #,response_model=schemas.TokenData)
 def create_upload_files(request: Request,myfiles: List[UploadFile]= File (...),db: Session = Depends(get_db)):
@@ -127,7 +137,7 @@ def create_upload_files(request: Request,myfiles: List[UploadFile]= File (...),d
             #print("file.filename alread exist!")
             #continue
 
-        file_location = os.path.join(f'{str(BASE_PATH / "static/")}{file.filename}')
+        file_location = os.path.join(f'static/{file.filename}')
         
         with open(file_location, "wb+") as buffer:
             content = file.file.read()
@@ -206,7 +216,7 @@ def rename_file(request:Request,db: Session = Depends(get_db),oldname:str= Form(
          return templates.TemplateResponse("login.html",{"request": request})
 
     print("current_user_id ",current_user.id)
-    path=str(BASE_PATH / "static")
+    path='D:/sem 8/Hackathon/app/static/'
 
     file = db.query(models.File).filter(models.File.user_id == current_user.id ).filter(models.File.filename ==oldname ).first()
     already_file=db.query(models.File).filter(models.File.user_id == current_user.id).filter(models.File.filename ==newname).first()
@@ -257,7 +267,7 @@ def download_file(request:Request,filename:str= Form(...),db: Session = Depends(
     if not current_user:
          return templates.TemplateResponse("login.html",{"request": request})
 
-    path=str(BASE_PATH / "static")
+    path='D:/sem 8/Hackathon/app/static/'
     user = db.query(models.User).filter(models.User.email ==current_user.email).first()
     file = db.query(models.File).filter(models.File.user_id ==user.id).first()
 
@@ -277,7 +287,7 @@ def delete_file(request:Request,db: Session = Depends(get_db),filename:str= Form
     if not current_user:
          return templates.TemplateResponse("login.html",{"request": request})
 
-    path=str(BASE_PATH / "templates")
+    path='D:/sem 8/Hackathon/app/static/'
     user = db.query(models.User).filter(models.User.email ==current_user.email).first()
     try:
         file= db.query(models.File).filter(models.File.user_id ==user.id)
