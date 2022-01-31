@@ -86,7 +86,7 @@ def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Sessi
             "error_message": "Shared User not found!"
         }, status_code=500)
 
-    path='D:/sem 8/Hackathon/app/static/'
+    path='static/'
     print("hiii")
 
     # file = db.query(models.File).filter(models.File.user_id ==current_user.id and models.File.filename ==oldname )
@@ -216,7 +216,7 @@ def rename_file(request:Request,db: Session = Depends(get_db),oldname:str= Form(
          return templates.TemplateResponse("login.html",{"request": request})
 
     print("current_user_id ",current_user.id)
-    path='D:/sem 8/Hackathon/app/static/'
+    path='static/'
 
     file = db.query(models.File).filter(models.File.user_id == current_user.id ).filter(models.File.filename ==oldname ).first()
     already_file=db.query(models.File).filter(models.File.user_id == current_user.id).filter(models.File.filename ==newname).first()
@@ -267,7 +267,7 @@ def download_file(request:Request,filename:str= Form(...),db: Session = Depends(
     if not current_user:
          return templates.TemplateResponse("login.html",{"request": request})
 
-    path='D:/sem 8/Hackathon/app/static/'
+    path='static/'
     user = db.query(models.User).filter(models.User.email ==current_user.email).first()
     file = db.query(models.File).filter(models.File.user_id ==user.id).first()
 
@@ -287,7 +287,7 @@ def delete_file(request:Request,db: Session = Depends(get_db),filename:str= Form
     if not current_user:
          return templates.TemplateResponse("login.html",{"request": request})
 
-    path='D:/sem 8/Hackathon/app/static/'
+    path='static/'
     user = db.query(models.User).filter(models.User.email ==current_user.email).first()
     try:
         file= db.query(models.File).filter(models.File.user_id ==user.id)
