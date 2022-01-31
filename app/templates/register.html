@@ -2,7 +2,7 @@
 <html>
 
 <body>
-    <form method="POST">
+    <form method="POST" >
         <div class="mb-3">
           <label>Username</label>
           <input type="text" required class="form-control" name="username" value="{{username}}" placeholder="username">
@@ -17,6 +17,10 @@
         </div>
         <button type="submit" class="btn btn-primary">Submit</button>
       </form>
+
+    <form method="get"  action="/login">
+        <input type="submit" name="submit" value="login after registration" />
+    </form>  
 
 <body>
 <html>
