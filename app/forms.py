@@ -37,10 +37,10 @@ class LoginForm:
         self.password = form.get("password")
 
     async def is_valid(self):
-        # if not self.username or not (self.username.__contains__("@")):
-        #     self.errors.append("Email is required")
+        if not self.username or not (self.username.__contains__("@")):
+            self.errors.append("Email is required")
         # if not self.password or not len(self.password) >= 4:
-        #     self.errors.append("A valid password is required")
+        #      self.errors.append("A valid password is required")
         if not self.errors:
             return True
         return False

@@ -1,5 +1,6 @@
 from os import getcwd, remove
 import os
+from traceback import print_tb
 from pydantic import EmailStr
 from fastapi.responses import FileResponse,JSONResponse
 from pathlib import Path
@@ -25,6 +26,8 @@ app = FastAPI()
 BASE_PATH = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_PATH / "templates"))
 
+#path='/app/app/static/'
+path='app/static/'
 models.Base.metadata.create_all(bind=engine)
 
 print(BASE_PATH)
@@ -32,12 +35,21 @@ print(os.getcwd())
 #oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-@app.get("/register",response_model=User)
+@app.get("/")
+async def home(request:Request):
+    return templates.TemplateResponse('home.html', context={'request': request})
+
+
+@app.post("/")
+async def home(request:Request):
+     return templates.TemplateResponse('home.html', context={'request': request})
+
+@app.get("/register")
 async def create_user(request:Request):
     return templates.TemplateResponse('register.html', context={'request': request})
 
 
-@app.post("/register",response_model=User)
+@app.post("/register")
 async def create_user(request:Request,db: Session = Depends(get_db)):
 
     form = forms.RegistrationForm(request)
@@ -59,7 +71,6 @@ async def create_user(request:Request,db: Session = Depends(get_db)):
 
 @app.post("/share",status_code=200)
 def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Session = Depends(get_db)):
-    
     #print("hi ldmflskdmf")
     access_token = request.cookies.get("access_token")
     scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
@@ -74,11 +85,12 @@ def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Sessi
             "shared": False,
             "error_message": "Shared User not found!"
         }, status_code=500) 
+        
 
-    path='/app/app/static/'
+    #path='/app/app/static/'
     print("hiii")
     # file = db.query(models.File).filter(models.File.user_id ==current_user.id and models.File.filename ==oldname )
-    already_file=db.query(models.File).filter(models.File.user_id ==shared.id and models.File.filename ==filename).first()
+    already_file=db.query(models.File).filter(models.File.user_id ==shared.id).filter(models.File.filename ==filename).first()
     
     if already_file:
         return JSONResponse(content={
@@ -86,7 +98,7 @@ def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Sessi
             "error_message": "Already file exist in shared user"
         }, status_code=500)
     
-    db_update = db.query(models.File).filter(models.File.user_id ==current_user.id and models.File.filename ==filename).first()
+    db_update = db.query(models.File).filter(models.File.user_id ==current_user.id).filter(models.File.filename ==filename).first()
     db_update.shared_to=shared.email
     db.commit()
 
@@ -98,9 +110,6 @@ def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Sessi
             "shared": True,
             "message": "Shared Successfully"
         }, status_code=200)
-
-
-    
 
 
 @app.post("/upload",status_code=200)
@@ -116,9 +125,9 @@ def create_upload_files(request: Request,myfiles: List[UploadFile]= File (...),d
     current_user = db.query(models.User).filter(models.User.email ==user.email).first()
     #print(user.username)
     existing_files = db.query(models.File).filter(models.File.user_id ==user.id)
-    
+
     for file in myfiles:
-        file_location = os.path.join(f'/app/app/static/{file.filename}')
+        file_location = path+file.filename #os.path.join(f'/app/app/static/{file.filename}')
         
         with open(file_location, "wb+") as buffer:
             content = file.file.read()
@@ -128,17 +137,23 @@ def create_upload_files(request: Request,myfiles: List[UploadFile]= File (...),d
         db_file = models.File(filename=file.filename,date_uploaded=str(datetime.utcnow()),user_id=current_user.id)
         db.add(db_file)
     db.commit()
+    return JSONResponse(content={
+            "uploaded": True,
+            "message": "Uploaded Successfully"
+        }, status_code=200)
     #print("uploaded")
     #return templates.TemplateResponse("files.html",{"request": request})
     
 
 @app.get("/files",status_code=200)
 def get_all(request: Request, db: Session = Depends(get_db)):
+    
     data=[]
     access_token = request.cookies.get("access_token")
-    #print("token: ", token)
+    print("token: ", access_token)
     scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
     current_user: User = token.get_current_user_from_token(token=param, db=db)
+    print(current_user.username)
     if not current_user:
          return templates.TemplateResponse("login.html",{"request": request})
 
@@ -153,7 +168,7 @@ def get_all(request: Request, db: Session = Depends(get_db)):
 
 
 @app.post("/files",status_code=200)
-def get_all(request:Request,db: Session = Depends(get_db),myfiles: List[UploadFile]= File (...)):
+def get_all(request:Request,db: Session = Depends(get_db)):
     #path='D:/sem 8/Hackathon/app/static/'
     data=[]
     access_token = request.cookies.get("access_token")
@@ -162,28 +177,20 @@ def get_all(request:Request,db: Session = Depends(get_db),myfiles: List[UploadFi
     current_user: User = token.get_current_user_from_token(token=param, db=db)
     if not current_user:
          return templates.TemplateResponse("login.html",{"request": request})
-    
-    #print( "req")
-    #print(request.form)
-
-    create_upload_files(request,myfiles,db)
+    #create_upload_files(request,myfiles,db)
 
     user = db.query(models.User).filter(models.User.email ==current_user.email).first()
     files = db.query(models.File).filter(models.File.user_id ==user.id)
 
-
-
     for file in files:
         data.append(file)
-    #print(data)
-    
+    #print(data)  
 
     return templates.TemplateResponse("files.html", {"request":Request,"data":data})
     #FileResponse(path + name_file, media_type='application/octet-stream', filename=name_file)
 
 
 @app.post("/rename",status_code=200)#not yet deleted the old file entry
-
 def rename_file(request:Request,db: Session = Depends(get_db),oldname:str= Form(...),newname:str= Form(...)):
 
     print(newname)
@@ -195,7 +202,7 @@ def rename_file(request:Request,db: Session = Depends(get_db),oldname:str= Form(
          return templates.TemplateResponse("login.html",{"request": request})
 
     print("current_user_id ",current_user.id)
-    path='/app/app/static/'
+    #path='/app/app/static/'
 
     file = db.query(models.File).filter(models.File.user_id == current_user.id ).filter(models.File.filename ==oldname ).first()
     already_file=db.query(models.File).filter(models.File.user_id == current_user.id).filter(models.File.filename ==newname).first()
@@ -228,7 +235,6 @@ def rename_file(request:Request,db: Session = Depends(get_db),oldname:str= Form(
     db.add(file)
     db.commit()
 
-
     return JSONResponse(content={
             "reNamed": True
             }, status_code=200) 
@@ -246,7 +252,7 @@ def download_file(request:Request,filename:str= Form(...),db: Session = Depends(
     if not current_user:
          return templates.TemplateResponse("login.html",{"request": request})
 
-    path='/app/app/static/'
+    #path='/app/app/static/'
     user = db.query(models.User).filter(models.User.email ==current_user.email).first()
     file = db.query(models.File).filter(models.File.user_id ==user.id).first()
 
@@ -266,12 +272,12 @@ def delete_file(request:Request,db: Session = Depends(get_db),filename:str= Form
     if not current_user:
          return templates.TemplateResponse("login.html",{"request": request})
 
-    path='/app/app/static/'
+    #path='/app/app/static/'
     user = db.query(models.User).filter(models.User.email ==current_user.email).first()
     try:
-        file= db.query(models.File).filter(models.File.user_id ==user.id)
-        file.delete(synchronize_session=False)
+        db.query(models.File).filter(models.File.user_id ==user.id).filter(models.File.filename ==filename).delete()
         db.commit()
+        
         remove( path + filename)
 
         return JSONResponse(content={
@@ -301,8 +307,11 @@ async def login(request:Request, db: Session = Depends(database.get_db)):
         except HTTPException:
             form.__dict__.update(msg="")
             form.__dict__.get("errors").append("Incorrect Email or Password")
-   
+    #print("VAAAAAAAAAAAAAAAAAAA")
     return templates.TemplateResponse("login.html", form.__dict__)
     
-    
-    
+@app.post("/logout")
+def logout(request:Request ,response : Response):
+    response=templates.TemplateResponse('home.html',{"request": request})
+    response.delete_cookie("access_token")
+    return response

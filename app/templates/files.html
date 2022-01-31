@@ -4,6 +4,7 @@
     <!-- <p>Please fill in the details to create an account with us.</p> -->
     
 <body>
+   
     <form method="POST">
         <div class="mb-3">
         {% if not data %}
@@ -50,7 +51,11 @@
     </form>
    
 
-    
+    <br /><br />
 
+    <form method="Post"  action="/logout" >
+        <input type="submit" name="submit" value="Logout" />
+    </form>
+    <br /><br />
 </body>
 <html>
