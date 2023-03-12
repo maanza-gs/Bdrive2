@@ -236,9 +236,9 @@ def download_file(request:Request,filename:str= Form(...),db: Session = Depends(
          return templates.TemplateResponse(loginPage,{"request": request})
 
     user = db.query(models.User).filter(models.User.email ==current_user.email).first()
-    file = db.query(models.File).filter(models.File.user_id ==user.id).first()
+    userFile = db.query(models.File).filter(models.File.user_id ==user.id).first()
 
-    if not file:
+    if not userFile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=errorMessage)
     return FileResponse(path + filename, media_type='application/octet-stream', filename=filename)
 
