@@ -38,7 +38,7 @@ def verify_token(token:str,credentials_exception):
         return email
     except JWTError:
         raise credentials_exception
-    #return token_data
+    return token_data
 
 
 def get_current_user(data: str = Depends(oauth2_scheme)):

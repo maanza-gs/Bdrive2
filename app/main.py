@@ -20,33 +20,35 @@ from .import crud,models,schemas,token
 from fastapi.templating import Jinja2Templates
 from starlette.responses import RedirectResponse
 
+loginPage = "login.html"
+registerPage = "register.html"
+homePage = "home.html"
+errorMessage = "File not found."
 
 app = FastAPI()
 
 BASE_PATH = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_PATH / "templates"))
 
-#path='/app/app/static/'
 path='app/static/'
 models.Base.metadata.create_all(bind=engine)
 
 print(BASE_PATH)
 print(os.getcwd())
-#oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 @app.get("/")
 async def home(request:Request):
-    return templates.TemplateResponse('home.html', context={'request': request})
+    return templates.TemplateResponse(homePage, context={'request': request})
 
 
 @app.post("/")
 async def home(request:Request):
-     return templates.TemplateResponse('home.html', context={'request': request})
+     return templates.TemplateResponse(homePage, context={'request': request})
 
 @app.get("/register")
 async def create_user(request:Request):
-    return templates.TemplateResponse('register.html', context={'request': request})
+    return templates.TemplateResponse(registerPage, context={'request': request})
 
 
 @app.post("/register")
@@ -67,16 +69,15 @@ async def create_user(request:Request,db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="username already registered")
 
     crud.create_user(db=db, user=user)
-    return templates.TemplateResponse("register.html", form.__dict__)
+    return templates.TemplateResponse(registerPage, form.__dict__)
 
 @app.post("/share",status_code=200)
 def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Session = Depends(get_db)):
-    #print("hi ldmflskdmf")
     access_token = request.cookies.get("access_token")
     scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
     current_user: User = token.get_current_user_from_token(token=param, db=db)
     if not current_user:
-         return templates.TemplateResponse("login.html",{"request": request})
+         return templates.TemplateResponse(loginPage,{"request": request})
 
     shared: User =crud.get_user_by_email(db,share)
 
@@ -87,9 +88,7 @@ def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Sessi
         }, status_code=500) 
         
 
-    #path='/app/app/static/'
     print("hiii")
-    # file = db.query(models.File).filter(models.File.user_id ==current_user.id and models.File.filename ==oldname )
     already_file=db.query(models.File).filter(models.File.user_id ==shared.id).filter(models.File.filename ==filename).first()
     
     if already_file:
@@ -105,7 +104,6 @@ def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Sessi
     db_file = models.File(filename=filename,date_uploaded=str(datetime.utcnow()),user_id=shared.id)
     db.add(db_file)
     db.commit()
-    #db.refresh()
     return JSONResponse(content={
             "shared": True,
             "message": "Shared Successfully"
@@ -114,26 +112,23 @@ def share(request:Request,filename:str= Form(...),share:str= Form(...),db: Sessi
 
 @app.post("/upload",status_code=200)
 def create_upload_files(request: Request,myfiles: List[UploadFile]= File (...),db: Session = Depends(get_db)):
-    #print(user.username)
     access_token = request.cookies.get("access_token")
-    #print("token: ", access_token)
-    scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
+
+    param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
     user: User = token.get_current_user_from_token(token=param, db=db)
     if not user:
-         return templates.TemplateResponse("login.html",{"request": request})
+         return templates.TemplateResponse(loginPage,{"request": request})
 
     current_user = db.query(models.User).filter(models.User.email ==user.email).first()
-    #print(user.username)
-    existing_files = db.query(models.File).filter(models.File.user_id ==user.id)
+
 
     for file in myfiles:
-        file_location = path+file.filename #os.path.join(f'/app/app/static/{file.filename}')
+        file_location = path+file.filename 
         
         with open(file_location, "wb+") as buffer:
             content = file.file.read()
             buffer.write(content)
-            buffer.close()
-        #print("copied")
+
         db_file = models.File(filename=file.filename,date_uploaded=str(datetime.utcnow()),user_id=current_user.id)
         db.add(db_file)
     db.commit()
@@ -141,8 +136,7 @@ def create_upload_files(request: Request,myfiles: List[UploadFile]= File (...),d
             "uploaded": True,
             "message": "Uploaded Successfully"
         }, status_code=200)
-    #print("uploaded")
-    #return templates.TemplateResponse("files.html",{"request": request})
+    
     
 
 @app.get("/files",status_code=200)
@@ -155,39 +149,33 @@ def get_all(request: Request, db: Session = Depends(get_db)):
     current_user: User = token.get_current_user_from_token(token=param, db=db)
     print(current_user.username)
     if not current_user:
-         return templates.TemplateResponse("login.html",{"request": request})
+         return templates.TemplateResponse(loginPage,{"request": request})
 
     user = db.query(models.User).filter(models.User.email ==current_user.email).first()
     files = db.query(models.File).filter(models.File.user_id ==user.id)
 
     for file in files:
         data.append(file)
-    #print(data)
-        #templates.TemplateResponse("login.html",{"request": request})
     return templates.TemplateResponse("files.html", {"request": request,"data":data})
 
 
 @app.post("/files",status_code=200)
 def get_all(request:Request,db: Session = Depends(get_db)):
-    #path='D:/sem 8/Hackathon/app/static/'
     data=[]
     access_token = request.cookies.get("access_token")
 
     scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
     current_user: User = token.get_current_user_from_token(token=param, db=db)
     if not current_user:
-         return templates.TemplateResponse("login.html",{"request": request})
-    #create_upload_files(request,myfiles,db)
+         return templates.TemplateResponse(loginPage,{"request": request})
 
     user = db.query(models.User).filter(models.User.email ==current_user.email).first()
     files = db.query(models.File).filter(models.File.user_id ==user.id)
 
     for file in files:
         data.append(file)
-    #print(data)  
 
     return templates.TemplateResponse("files.html", {"request":Request,"data":data})
-    #FileResponse(path + name_file, media_type='application/octet-stream', filename=name_file)
 
 
 @app.post("/rename",status_code=200)#not yet deleted the old file entry
@@ -195,14 +183,12 @@ def rename_file(request:Request,db: Session = Depends(get_db),oldname:str= Form(
 
     print(newname)
     access_token = request.cookies.get("access_token")
-    #print("token: ", token)
     scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
     current_user: User = token.get_current_user_from_token(token=param, db=db)
     if not current_user:
-         return templates.TemplateResponse("login.html",{"request": request})
+         return templates.TemplateResponse(loginPage,{"request": request})
 
     print("current_user_id ",current_user.id)
-    #path='/app/app/static/'
 
     file = db.query(models.File).filter(models.File.user_id == current_user.id ).filter(models.File.filename ==oldname ).first()
     already_file=db.query(models.File).filter(models.File.user_id == current_user.id).filter(models.File.filename ==newname).first()
@@ -226,11 +212,10 @@ def rename_file(request:Request,db: Session = Depends(get_db),oldname:str= Form(
         }, status_code=500)
 
     if not file:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="File not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=errorMessage)
 
     os.rename(path+oldname,path+newname)
 
-    #db_file = models.File(filename=oldname,date_uploaded=str(datetime.utcnow()),user_id=current_user.id)
     file.filename=newname
     db.add(file)
     db.commit()
@@ -239,25 +224,22 @@ def rename_file(request:Request,db: Session = Depends(get_db),oldname:str= Form(
             "reNamed": True
             }, status_code=200) 
     
-    #return FileResponse(path + filename, media_type='application/octet-stream', filename=filename)
 
 
 @app.post("/download",status_code=200)
 def download_file(request:Request,filename:str= Form(...),db: Session = Depends(get_db)):
 
     access_token = request.cookies.get("access_token")
-    #print("token: ", token)
     scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
     current_user: User = token.get_current_user_from_token(token=param, db=db)
     if not current_user:
-         return templates.TemplateResponse("login.html",{"request": request})
+         return templates.TemplateResponse(loginPage,{"request": request})
 
-    #path='/app/app/static/'
     user = db.query(models.User).filter(models.User.email ==current_user.email).first()
     file = db.query(models.File).filter(models.File.user_id ==user.id).first()
 
     if not file:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="File not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=errorMessage)
     return FileResponse(path + filename, media_type='application/octet-stream', filename=filename)
 
 
@@ -266,13 +248,11 @@ def download_file(request:Request,filename:str= Form(...),db: Session = Depends(
 def delete_file(request:Request,db: Session = Depends(get_db),filename:str= Form(...)):
     
     access_token = request.cookies.get("access_token")
-    #print("token: gotha ", token)
     scheme, param = get_authorization_scheme_param(access_token)  # scheme will hold "Bearer" and param will hold actual token value
     current_user: User = token.get_current_user_from_token(token=param, db=db)
     if not current_user:
-         return templates.TemplateResponse("login.html",{"request": request})
+         return templates.TemplateResponse(loginPage,{"request": request})
 
-    #path='/app/app/static/'
     user = db.query(models.User).filter(models.User.email ==current_user.email).first()
     try:
         db.query(models.File).filter(models.File.user_id ==user.id).filter(models.File.filename ==filename).delete()
@@ -286,7 +266,7 @@ def delete_file(request:Request,db: Session = Depends(get_db),filename:str= Form
     except FileNotFoundError:
         return JSONResponse(content={
             "removed": False,
-            "error_message": "File not found"
+            "error_message": errorMessage
         }, status_code=404)
 
 
@@ -301,17 +281,16 @@ async def login(request:Request, db: Session = Depends(database.get_db)):
     await form.load_data()
     if await form.is_valid():
         try:
-            response = templates.TemplateResponse("login.html", form.__dict__)
+            response = templates.TemplateResponse(loginPage, form.__dict__)
             token.login_for_access_token(response=response, form_data=form, db=db)
             return response
         except HTTPException:
             form.__dict__.update(msg="")
             form.__dict__.get("errors").append("Incorrect Email or Password")
-    #print("VAAAAAAAAAAAAAAAAAAA")
-    return templates.TemplateResponse("login.html", form.__dict__)
+    return templates.TemplateResponse(loginPage, form.__dict__)
     
 @app.post("/logout")
-def logout(request:Request ,response : Response):
-    response=templates.TemplateResponse('home.html',{"request": request})
+def logout(request:Request , response:Response):
+    response=templates.TemplateResponse(homePage,{"request": request})
     response.delete_cookie("access_token")
     return response

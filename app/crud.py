@@ -9,18 +9,6 @@ import shutil
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-
-# def get_user(db: Session, user_id: int):
-#   return db.query(models.User).filter(models.User.id == user_id).first()
-
-# def rename(db: Session, oldname:str,newname:str):
-
-#     new_user = models.User(username=user.username,email=user.email,password=Hash.bcrypt(user.password))
-#     db.add(new_user)
-#     db.commit()
-#     db.refresh(new_user)
-#     return new_user
-
 def get_user(db: Session, username: str):
     return db.query(models.User).filter(models.User.email == username).first()
 
@@ -38,7 +26,6 @@ def create_user(db: Session, user: schemas.UserCreate):
 
 
 def get_file_of_user(db: Session, email: str):
-    user=db.query(models.File).filter(models.File.email == email).first()
     return db.query(models.File).filter(models.File.email == email).first()
 
 def save_file(file_uploaded:UploadFile):
@@ -49,8 +36,5 @@ def save_file(file_uploaded:UploadFile):
     with open(file_location, "wb+") as buffer:
         shutil.copyfileobj(file_uploaded.file, buffer)
     return hashed_name
-    # new_file = models.Blog(title=request.title, body=request.body,user_id=1)
-    # db.add(new_file)
-
 
 
