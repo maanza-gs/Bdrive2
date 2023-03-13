@@ -190,10 +190,10 @@ def rename_file(request:Request,db: Session = Depends(get_db),oldname:str= Form(
 
     print("current_user_id ",current_user.id)
 
-    file = db.query(models.File).filter(models.File.user_id == current_user.id ).filter(models.File.filename ==oldname ).first()
+    files = db.query(models.File).filter(models.File.user_id == current_user.id ).filter(models.File.filename ==oldname ).first()
     already_file=db.query(models.File).filter(models.File.user_id == current_user.id).filter(models.File.filename ==newname).first()
 
-    print(file)
+    print(files)
     print(already_file)
     
 
@@ -211,13 +211,13 @@ def rename_file(request:Request,db: Session = Depends(get_db),oldname:str= Form(
             "error_message": "Already file exist in Rename"
         }, status_code=500)
 
-    if not file:
+    if not files:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=errorMessage)
 
     os.rename(path+oldname,path+newname)
 
-    file.filename=newname
-    db.add(file)
+    files.filename=newname
+    db.add(files)
     db.commit()
 
     return JSONResponse(content={
