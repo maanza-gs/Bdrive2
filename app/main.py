@@ -122,14 +122,14 @@ def create_upload_files(request: Request,myfiles: List[UploadFile]= File (...),d
     current_user = db.query(models.User).filter(models.User.email ==user.email).first()
 
 
-    for file in myfiles:
-        file_location = path+file.filename 
+    for files in myfiles:
+        file_location = path+files.filename 
         
         with open(file_location, "wb+") as buffer:
-            content = file.file.read()
+            content = files.file.read()
             buffer.write(content)
 
-        db_file = models.File(filename=file.filename,date_uploaded=str(datetime.utcnow()),user_id=current_user.id)
+        db_file = models.File(filename=files.filename,date_uploaded=str(datetime.utcnow()),user_id=current_user.id)
         db.add(db_file)
     db.commit()
     return JSONResponse(content={
@@ -290,7 +290,8 @@ async def login(request:Request, db: Session = Depends(database.get_db)):
     return templates.TemplateResponse(loginPage, form.__dict__)
     
 @app.post("/logout")
-def logout(request:Request , response:Response):
+def logout(request:Request):
     response=templates.TemplateResponse(homePage,{"request": request})
     response.delete_cookie("access_token")
     return response
+

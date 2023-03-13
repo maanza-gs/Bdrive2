@@ -61,12 +61,10 @@ def get_current_user_from_token(token: str = Depends(oauth2_scheme),db: Session=
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
-        #print("username/email extracted is ",username)
         if username is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    #print("ggggggggg:",username)
     user = crud.get_user(db=db,username=username)
     if user is None:
         print("USER NOT IN DATABASE!!")
@@ -76,8 +74,6 @@ def get_current_user_from_token(token: str = Depends(oauth2_scheme),db: Session=
 def authenticate_user(username: str, password: str,db: Session=Depends(database.get_db)):
     
     user = crud.get_user(db=db,username=username)
-    #print(user.username)
-    #print("fuck")
     if not user:
         return False
     if not Hash.verify(password, user.password):
@@ -86,7 +82,6 @@ def authenticate_user(username: str, password: str,db: Session=Depends(database.
 
 def login_for_access_token(response: Response,form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):  #added response as a function parameter
     user = authenticate_user(form_data.username, form_data.password, db)
-    #print("adgfdddddddddddddddddddddddddddddddddddddddddd")
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
